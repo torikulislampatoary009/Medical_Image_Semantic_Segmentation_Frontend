@@ -1,4 +1,4 @@
-const API = localStorage.getItem('NEUROSEG_API_URL') || 'https://YOUR-MEDICAL-API.onrender.com';
+const API = localStorage.getItem('NEUROSEG_API_URL') || 'https://medical-image-semantic-segmentation-vv5r.onrender.com';
 const statusEl=document.getElementById('apiStatus'), input=document.getElementById('imageInput'), msg=document.getElementById('message');
 fetch(API+'/health').then(r=>r.ok?statusEl.classList.add('online'):null).then(()=>statusEl.textContent='API connected').catch(()=>statusEl.textContent='API not connected');
 input.addEventListener('change',()=>{const f=input.files[0];if(!f)return;document.getElementById('fileName').textContent=f.name;const url=URL.createObjectURL(f);const img=document.getElementById('originalPreview');img.src=url;img.style.display='block';document.getElementById('originalEmpty').style.display='none';});
