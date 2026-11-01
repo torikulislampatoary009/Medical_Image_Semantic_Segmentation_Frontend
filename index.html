@@ -1,11 +1,122 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>NeuroSeg AI | MRI Segmentation</title><link rel="stylesheet" href="styles.css"></head>
-<body><header><div class="brand">◉ NeuroSeg <span>AI</span></div><nav><a href="#workflow">Workflow</a><a href="#results">Results</a><a href="#about">About</a></nav><span class="api" id="apiStatus">API checking…</span></header>
-<main><section class="hero"><div><p class="eyebrow">RESEARCH PROTOTYPE · U-NET SEGMENTATION</p><h1>See beyond the scan.<br><em>Map every pixel.</em></h1><p class="lead">Upload a brain MRI slice, run a segmentation model, and inspect the predicted mask with quantitative metrics.</p><a class="primary" href="#workspace">Open workspace ↓</a></div><div class="hero-art"><div class="scan scan-a"></div><div class="scan scan-b"></div><div class="scan-label">MRI / MASK OVERLAY</div></div></section>
-<section id="workspace" class="panel"><div class="section-head"><div><p class="eyebrow">INFERENCE WORKSPACE</p><h2>Segment an MRI image</h2></div><span class="pill">Model inference</span></div>
-<div class="upload-grid"><label class="drop" for="imageInput"><input id="imageInput" type="file" accept="image/*"><b>＋ Choose MRI image</b><span>PNG / JPG · 2D slice</span><small id="fileName">No image selected</small></label><div class="controls"><label>Model<select id="model"><option value="unet">U-Net (trained weights required)</option><option value="baseline">Classical baseline</option></select></label><label>Threshold <output id="thresholdValue">0.50</output><input id="threshold" type="range" min=".1" max=".9" step=".05" value=".5"></label><button id="runBtn" class="primary">Run segmentation</button><p id="message" class="muted">Connect the API and load a trained checkpoint to run inference.</p></div></div>
-<div class="preview-grid"><div class="preview"><h3>Original MRI</h3><img id="originalPreview" alt="Original MRI preview"><div id="originalEmpty">Your uploaded image appears here.</div></div><div class="preview"><h3>Predicted mask / overlay</h3><img id="maskPreview" alt="Predicted segmentation"><div id="maskEmpty">Segmentation result appears here.</div></div></div></section>
-<section id="results" class="panel"><div class="section-head"><div><p class="eyebrow">EVALUATION</p><h2>Model performance</h2></div><span class="pill">Validation metrics</span></div><div class="metrics"><div><small>Dice score</small><strong id="dice">—</strong></div><div><small>IoU</small><strong id="iou">—</strong></div><div><small>Precision</small><strong id="precision">—</strong></div><div><small>Recall</small><strong id="recall">—</strong></div></div><p class="muted">Metrics are returned only when ground-truth masks are provided. Inference alone cannot establish clinical accuracy.</p></section>
-<section id="workflow" class="steps"><p class="eyebrow">RESEARCH PIPELINE</p><h2>From raw data to evaluated model</h2><div class="step-grid"><article><b>01 / Acquire & explore</b><p>Load MRI and mask pairs; inspect class balance and image distributions.</p></article><article><b>02 / Preprocess</b><p>Normalize intensities, resize consistently, and validate mask alignment.</p></article><article><b>03 / Compare models</b><p>Pixel-level logistic baseline vs. U-Net segmentation.</p></article><article><b>04 / Tune</b><p>Search learning rate, batch size, and threshold on validation data.</p></article><article><b>05 / Evaluate</b><p>Dice, IoU, precision, recall, pixel confusion matrix.</p></article></div></section>
-<section id="about" class="foot"><b>NeuroSeg AI</b><p>Academic research prototype only. Not intended for diagnosis or treatment decisions.</p></section></main><script src="app.js"></script></body></html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Research prototype for brain MRI FLAIR abnormality segmentation.">
+    <title>NeuroSeg AI | MRI Segmentation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <a class="brand" href="#top">◉ NeuroSeg <span>AI</span></a>
+        <nav aria-label="Main navigation">
+            <a href="#workflow">Workflow</a>
+            <a href="#results">Results</a>
+            <a href="#about">About</a>
+        </nav>
+        <span class="api" id="apiStatus">API checking…</span>
+    </header>
+
+    <main id="top">
+        <section class="hero">
+            <div>
+                <p class="eyebrow">RESEARCH PROTOTYPE · PRETRAINED U-NET</p>
+                <h1>See beyond the scan.<br><em>Map every pixel.</em></h1>
+                <p class="lead">Upload three consecutive FLAIR brain MRI slices and inspect the predicted abnormality segmentation mask.</p>
+                <a class="primary" href="#workspace">Open workspace ↓</a>
+            </div>
+            <div class="hero-art" aria-label="Illustration of MRI scans">
+                <div class="scan scan-a"></div>
+                <div class="scan scan-b"></div>
+                <span class="scan-label">MRI / MASK OVERLAY</span>
+            </div>
+        </section>
+
+        <section id="workspace" class="panel">
+            <div class="section-head">
+                <div>
+                    <p class="eyebrow">INFERENCE WORKSPACE</p>
+                    <h2>Segment consecutive FLAIR slices</h2>
+                </div>
+                <span class="pill">Pretrained model</span>
+            </div>
+
+            <p class="notice"><strong>Required:</strong> choose three adjacent axial FLAIR slices from the same MRI volume, in order: previous, target, next. Do not upload three unrelated images or repeat one image three times.</p>
+
+            <div class="upload-grid">
+                <div class="slice-upload-grid">
+                    <label class="drop" for="previousInput">
+                        <input id="previousInput" type="file" accept="image/png,image/jpeg">
+                        <b>＋ Previous slice</b>
+                        <span>PNG / JPG</span>
+                        <small id="previousName">No image selected</small>
+                    </label>
+                    <label class="drop" for="currentInput">
+                        <input id="currentInput" type="file" accept="image/png,image/jpeg">
+                        <b>＋ Target slice</b>
+                        <span>PNG / JPG</span>
+                        <small id="currentName">No image selected</small>
+                    </label>
+                    <label class="drop" for="followingInput">
+                        <input id="followingInput" type="file" accept="image/png,image/jpeg">
+                        <b>＋ Next slice</b>
+                        <span>PNG / JPG</span>
+                        <small id="followingName">No image selected</small>
+                    </label>
+                </div>
+                <div class="controls">
+                    <label for="threshold">Segmentation threshold <output id="thresholdValue">0.50</output>
+                        <input id="threshold" type="range" min="0.1" max="0.9" step="0.05" value="0.5">
+                    </label>
+                    <button id="runBtn" class="primary" type="button">Run segmentation</button>
+                    <p id="message" class="muted" role="status">Waiting for three adjacent FLAIR slices.</p>
+                </div>
+            </div>
+
+            <div class="preview-grid">
+                <div class="preview">
+                    <h3>Target MRI slice</h3>
+                    <img id="originalPreview" alt="Target MRI preview">
+                    <div id="originalEmpty">Your target slice preview appears here.</div>
+                </div>
+                <div class="preview">
+                    <h3>Predicted segmentation mask</h3>
+                    <img id="maskPreview" alt="Predicted segmentation mask">
+                    <div id="maskEmpty">Segmentation result appears here.</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="results" class="panel">
+            <div class="section-head">
+                <div>
+                    <p class="eyebrow">EVALUATION</p>
+                    <h2>Model performance</h2>
+                </div>
+                <span class="pill">No ground truth uploaded</span>
+            </div>
+            <p class="muted">Dice, IoU, precision and recall cannot be calculated from an input scan alone. These metrics require a corresponding expert-annotated ground-truth mask.</p>
+        </section>
+
+        <section id="workflow" class="steps">
+            <p class="eyebrow">RESEARCH PIPELINE</p>
+            <h2>How segmentation works</h2>
+            <div class="step-grid">
+                <article><b>01 / Select slices</b><p>Choose three consecutive axial FLAIR slices from one MRI volume.</p></article>
+                <article><b>02 / Preprocess</b><p>The API converts images to grayscale, scales them to the model input size and builds a three-channel tensor.</p></article>
+                <article><b>03 / Predict</b><p>The pretrained U-Net estimates the FLAIR abnormality mask for the middle slice.</p></article>
+                <article><b>04 / Review</b><p>Inspect the predicted binary mask alongside the target MRI slice.</p></article>
+                <article><b>05 / Evaluate</b><p>Use separate expert labels and held-out cases for meaningful Dice and IoU evaluation.</p></article>
+            </div>
+        </section>
+
+        <section id="about" class="foot">
+            <b>NeuroSeg AI</b>
+            <p>Academic research prototype only. Not intended for diagnosis or treatment decisions.</p>
+            <p>Model: <a href="https://github.com/mateuszbuda/brain-segmentation-pytorch" target="_blank" rel="noopener">mateuszbuda/brain-segmentation-pytorch</a>.</p>
+        </section>
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>

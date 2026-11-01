@@ -1,6 +1,100 @@
-const API = localStorage.getItem('NEUROSEG_API_URL') || 'https://medical-image-semantic-segmentation-vv5r.onrender.com';
-const statusEl=document.getElementById('apiStatus'), input=document.getElementById('imageInput'), msg=document.getElementById('message');
-fetch(API+'/health').then(r=>r.ok?statusEl.classList.add('online'):null).then(()=>statusEl.textContent='API connected').catch(()=>statusEl.textContent='API not connected');
-input.addEventListener('change',()=>{const f=input.files[0];if(!f)return;document.getElementById('fileName').textContent=f.name;const url=URL.createObjectURL(f);const img=document.getElementById('originalPreview');img.src=url;img.style.display='block';document.getElementById('originalEmpty').style.display='none';});
-document.getElementById('threshold').addEventListener('input',e=>document.getElementById('thresholdValue').textContent=Number(e.target.value).toFixed(2));
-document.getElementById('runBtn').addEventListener('click',async()=>{const f=input.files[0];if(!f){msg.textContent='Please choose an MRI image first.';return;}const fd=new FormData();fd.append('file',f);fd.append('model',document.getElementById('model').value);fd.append('threshold',document.getElementById('threshold').value);msg.textContent='Processing…';try{const r=await fetch(API+'/api/v1/segment',{method:'POST',body:fd});const d=await r.json();if(!r.ok)throw new Error(d.detail||'Inference failed');const im=document.getElementById('maskPreview');im.src='data:image/png;base64,'+d.mask_png_base64;im.style.display='block';document.getElementById('maskEmpty').style.display='none';msg.textContent=d.message||'Segmentation completed.';if(d.metrics){for(const k of ['dice','iou','precision','recall'])document.getElementById(k).textContent=d.metrics[k].toFixed(4);}else msg.textContent+=' Ground truth not supplied; metrics unavailable.';}catch(e){msg.textContent='API error: '+e.message+'. Check backend URL and trained weights.';}});
+"use strict";
+
+const API_URL = (
+    localStorage.getItem("NEUROSEG_API_URL") ||
+    "https://medical-image-semantic-segmentation-vv5r.onrender.com"
+).replace(/\/$/, "");
+
+const statusElement = document.getElementById("apiStatus");
+const messageElement = document.getElementById("message");
+const sliceInputs = {
+    previous: document.getElementById("previousInput"),
+    current: document.getElementById("currentInput"),
+    following: document.getElementById("followingInput"),
+};
+
+function setMessage(message, isError = false) {
+    messageElement.textContent = message;
+    messageElement.classList.toggle("error", isError);
+}
+
+async function checkApi() {
+    try {
+        const response = await fetch(`${API_URL}/health`);
+        if (!response.ok) throw new Error("API health check failed");
+        const data = await response.json();
+        statusElement.textContent = data.model_loaded
+            ? "API connected · model loaded"
+            : "API connected · model unavailable";
+        statusElement.classList.toggle("online", Boolean(data.model_loaded));
+    } catch (error) {
+        statusElement.textContent = "API not connected";
+        statusElement.classList.remove("online");
+    }
+}
+
+Object.entries(sliceInputs).forEach(([key, input]) => {
+    input.addEventListener("change", () => {
+        const file = input.files[0];
+        if (!file) return;
+
+        document.getElementById(`${key}Name`).textContent = file.name;
+        if (key === "current") {
+            const preview = document.getElementById("originalPreview");
+            preview.src = URL.createObjectURL(file);
+            preview.style.display = "block";
+            document.getElementById("originalEmpty").style.display = "none";
+        }
+    });
+});
+
+document.getElementById("threshold").addEventListener("input", (event) => {
+    document.getElementById("thresholdValue").textContent =
+        Number(event.target.value).toFixed(2);
+});
+
+document.getElementById("runBtn").addEventListener("click", async () => {
+    const files = Object.fromEntries(
+        Object.entries(sliceInputs).map(([key, input]) => [key, input.files[0]])
+    );
+
+    if (Object.values(files).some((file) => !file)) {
+        setMessage("Please select all three adjacent FLAIR slices.", true);
+        return;
+    }
+
+    const button = document.getElementById("runBtn");
+    const formData = new FormData();
+    formData.append("previous", files.previous);
+    formData.append("current", files.current);
+    formData.append("following", files.following);
+    formData.append("threshold", document.getElementById("threshold").value);
+
+    button.disabled = true;
+    button.textContent = "Processing…";
+    setMessage("Running pretrained U-Net inference. The first request may take longer while Render wakes up.");
+
+    try {
+        const response = await fetch(`${API_URL}/api/v1/segment`, {
+            method: "POST",
+            body: formData,
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.detail || "Segmentation request failed.");
+        }
+
+        const maskPreview = document.getElementById("maskPreview");
+        maskPreview.src = `data:image/png;base64,${result.mask_png_base64}`;
+        maskPreview.style.display = "block";
+        document.getElementById("maskEmpty").style.display = "none";
+        setMessage(`${result.message} ${result.warning || ""}`);
+    } catch (error) {
+        setMessage(`API error: ${error.message}`, true);
+    } finally {
+        button.disabled = false;
+        button.textContent = "Run segmentation";
+    }
+});
+
+checkApi();
