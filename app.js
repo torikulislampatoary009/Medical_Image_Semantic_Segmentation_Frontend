@@ -38,7 +38,23 @@ Object.entries(sliceInputs).forEach(([key, input]) => {
         const file = input.files[0];
         if (!file) return;
 
-        document.getElementById(`${key}Name`).textContent = file.name;
+        const nameElement = document.getElementById(`${key}Name`);
+        nameElement.textContent = file.name;
+
+        // Show source dimensions for transparency. Different dimensions are
+        // allowed; the backend independently resizes each slice to 256x256.
+        if (window.createImageBitmap) {
+            createImageBitmap(file)
+                .then((bitmap) => {
+                    nameElement.textContent =
+                        `${file.name} · ${bitmap.width} × ${bitmap.height}px`;
+                    bitmap.close();
+                })
+                .catch(() => {
+                    nameElement.textContent = `${file.name} · dimensions unavailable`;
+                });
+        }
+
         if (key === "current") {
             const preview = document.getElementById("originalPreview");
             preview.src = URL.createObjectURL(file);
@@ -72,7 +88,7 @@ document.getElementById("runBtn").addEventListener("click", async () => {
 
     button.disabled = true;
     button.textContent = "Processing…";
-    setMessage("Running pretrained U-Net inference. The first request may take longer while Render wakes up.");
+    setMessage("Preparing the three slices independently at 256 × 256, then running pretrained U-Net inference. The first request may take longer while Render wakes up.");
 
     try {
         const response = await fetch(`${API_URL}/api/v1/segment`, {

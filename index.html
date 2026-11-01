@@ -42,7 +42,7 @@
                 <span class="pill">Pretrained model</span>
             </div>
 
-            <p class="notice"><strong>Required:</strong> choose three adjacent axial FLAIR slices from the same MRI volume, in order: previous, target, next. Do not upload three unrelated images or repeat one image three times.</p>
+            <p class="notice"><strong>Required:</strong> choose three adjacent axial FLAIR slices from the same MRI volume, in order: previous, target, next. The three files may have different pixel dimensions; the API resizes each one independently to the model input size. Do not upload three unrelated images or repeat one image three times.</p>
 
             <div class="upload-grid">
                 <div class="slice-upload-grid">
